@@ -15,12 +15,16 @@
 ////==========================================================================
 #define SLEEP_TIME              1
 #define DEFAULT_LOGGER_LEVEL    LOG_INFO
-#define DEBUG_LOGGER_LEVEL      LOG_DEBUG
+#define DEBUG_LOGGER_LEVEL      LOG_TRACE
 #define MAX_NAME_SIZE           10
 #define MAX_MESSAGE_SIZE        100
 
 #define TOKEN_TYPE_EMPTY        1
 #define TOKEN_TYPE_MESSAGE      2
+
+#define LOGGING_SERVICE_PORT    9999
+#define LOGGING_SERVICE_ADDRESS "224.3.2.1"
+#define LOGGING_SERVICE_SIZE    50
 
 
 
@@ -161,6 +165,57 @@ void setup_logger(){
 }
 
 
+////==========================================================================
+//// LOGGING SERVICE
+////==========================================================================
+int multicast_socket_fd;
+
+void setup_logging_service() {
+
+    // setup multicast address
+    struct sockaddr_in multicast_address;
+    memset(&multicast_address, 0, sizeof(multicast_address));
+    multicast_address.sin_family = AF_INET;
+    multicast_address.sin_port = htons(LOGGING_SERVICE_PORT);
+
+    // parse ip
+    if (inet_pton(AF_INET, LOGGING_SERVICE_ADDRESS, &(multicast_address.sin_addr)) != 1)
+        exit_fatal("Logging service address not in IPv4 format");
+
+    // create socket
+    multicast_socket_fd = socket(AF_INET, SOCK_DGRAM, 0);
+    if (multicast_socket_fd < 0)
+    exit_fatal_no("An error occurred while creating multicast socket");
+
+    // connect socket
+    if (connect(multicast_socket_fd, (const struct sockaddr *)&multicast_address, sizeof(multicast_address)) == -1)
+        exit_fatal_no("An error occurred while connecting to multicast");
+
+    log_trace("Multicast socket connected successfully");
+
+}
+
+void cleanup_multicast_socket() {
+    if (close(multicast_socket_fd) == -1)
+        log_error("An error occurred while closing multicast socket");
+
+    log_trace("Multicast socket closed successfully");
+}
+
+void log_token(struct token *tok) {
+
+    // compose message
+    char buffer[LOGGING_SERVICE_SIZE];
+    int n = sprintf(buffer, "%s %d %d", arg_name->sval[0], tok->type, tok->uuid);
+
+    // send multicast
+    if (write(multicast_socket_fd, buffer, n) == -1)
+        log_error("An error occurred while sending multicast");
+
+    log_trace("Multicast to logging service has been sent");
+}
+
+
 
 ////==========================================================================
 //// SOCKETS
@@ -268,6 +323,7 @@ void send_token(struct token *tok) {
         exit_fatal_no("An error occurred while sending token");
 
     log_debug("Token of type %d has been sent (uuid=%d)", tok->type, tok->uuid);
+    log_token(tok);
 }
 
 void send_new_token() {
@@ -375,6 +431,7 @@ void setup_input_socket_thread() {
 void handle_exit() {
     cleanup_input_socket();
     cleanup_output_socket();
+    cleanup_multicast_socket();
 }
 
 void setup_atexit() {
@@ -415,6 +472,8 @@ int main(int argc, char **args) {
     setup_sigint();
 
     queue_init();
+
+    setup_logging_service();
 
     setup_input_socket();
     setup_output_socket();
