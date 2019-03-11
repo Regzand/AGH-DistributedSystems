@@ -21,6 +21,7 @@
 
 #define TOKEN_TYPE_EMPTY        0
 #define TOKEN_TYPE_MESSAGE      1
+#define TOKEN_TYPE_MESSAGE_ACK  2
 #define TOKEN_TYPE_CONN         10
 #define TOKEN_TYPE_CONN_ACK     11
 
@@ -377,8 +378,8 @@ void handle_token_message(struct token *tok) {
         // display message
         printf("%s > %s\n", tok->data.msg.from, tok->data.msg.msg);
 
-        // send an empty token
-        tok->type = TOKEN_TYPE_EMPTY;
+        // send an confirmation token
+        tok->type = TOKEN_TYPE_MESSAGE_ACK;
         send_token(tok);
 
         return;
@@ -391,6 +392,34 @@ void handle_token_message(struct token *tok) {
         log_warn("Message could not be delivered to \"%s\" - no such client in network", tok->data.msg.to);
 
         // send an empty token
+        tok->type = TOKEN_TYPE_EMPTY;
+        send_token(tok);
+
+        return;
+    }
+
+    // message not related to this client
+    send_token(tok);
+
+}
+
+void handle_token_message_ack(struct token *tok) {
+
+    // if message was from this client
+    if (strcmp(tok->data.msg.from, arg_name->sval[0]) == 0) {
+        log_info("Message has been delivered to %s", tok->data.msg.to);
+
+        tok->type = TOKEN_TYPE_EMPTY;
+        send_token(tok);
+
+        return;
+    }
+
+    // if message was for to this client
+    if (strcmp(tok->data.msg.to, arg_name->sval[0]) == 0) {
+
+        log_debug("Confirmation wasn't delivered");
+
         tok->type = TOKEN_TYPE_EMPTY;
         send_token(tok);
 
@@ -479,6 +508,9 @@ void *handle_socket() {
                 break;
             case TOKEN_TYPE_MESSAGE:
                 handle_token_message(&tok);
+                break;
+            case TOKEN_TYPE_MESSAGE_ACK:
+                handle_token_message_ack(&tok);
                 break;
             case TOKEN_TYPE_CONN:
                 handle_token_conn(&tok);
