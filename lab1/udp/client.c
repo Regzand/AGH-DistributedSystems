@@ -117,7 +117,7 @@ void queue_init(){
 ////==========================================================================
 //// ARGUMENTS
 ////==========================================================================
-struct arg_lit *arg_help, *arg_token, *arg_debug;
+struct arg_lit *arg_help, *arg_debug;
 struct arg_str *arg_name, *arg_ip, *arg_next_ip;
 struct arg_int *arg_port, *arg_next_port;
 struct arg_end *end;
@@ -126,7 +126,6 @@ void parse_arguments(int argc, char **args) {
 
     void *argtable[] = {
             arg_help        = arg_litn("h", "help", 0, 1, "Display this help and exit"),
-            arg_token       = arg_litn("t", "token", 0, 1, "Start with token"),
             arg_debug       = arg_litn("d", "debug", 0, 1, "Enable debug mode"),
             arg_name        = arg_strn(NULL, NULL, "<name>", 1, 1, "Name of this client"),
             arg_ip          = arg_strn(NULL, NULL, "<ip>", 1, 1, "IPv4 address of this client"),
