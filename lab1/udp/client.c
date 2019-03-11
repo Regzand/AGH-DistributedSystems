@@ -15,12 +15,14 @@
 ////==========================================================================
 #define SLEEP_TIME              1
 #define DEFAULT_LOGGER_LEVEL    LOG_INFO
-#define DEBUG_LOGGER_LEVEL      LOG_TRACE
+#define DEBUG_LOGGER_LEVEL      LOG_DEBUG
 #define MAX_NAME_SIZE           10
 #define MAX_MESSAGE_SIZE        100
 
-#define TOKEN_TYPE_EMPTY        1
-#define TOKEN_TYPE_MESSAGE      2
+#define TOKEN_TYPE_EMPTY        0
+#define TOKEN_TYPE_MESSAGE      1
+#define TOKEN_TYPE_CONN         10
+#define TOKEN_TYPE_CONN_ACK     11
 
 #define LOGGING_SERVICE_PORT    9999
 #define LOGGING_SERVICE_ADDRESS "224.3.2.1"
@@ -37,15 +39,32 @@ typedef struct message {
     char msg[MAX_MESSAGE_SIZE];
 } message;
 
+typedef struct connection {
+    char address[INET_ADDRSTRLEN];
+    int port;
+} connection;
+
 union payload {
     message msg;
+    connection conn;
 };
+
+
+
+////==========================================================================
+//// TOKEN
+////==========================================================================
+int valid_token_uuid = -1;
 
 typedef struct token {
     char type;
     int uuid;
     union payload data;
 } token;
+
+int is_token_valid(struct token *tok) {
+    return valid_token_uuid == -1 || tok->uuid == valid_token_uuid;
+}
 
 
 
@@ -99,7 +118,7 @@ void queue_init(){
 //// ARGUMENTS
 ////==========================================================================
 struct arg_lit *arg_help, *arg_token, *arg_debug;
-struct arg_str *arg_name, *arg_next_ip;
+struct arg_str *arg_name, *arg_ip, *arg_next_ip;
 struct arg_int *arg_port, *arg_next_port;
 struct arg_end *end;
 
@@ -110,9 +129,10 @@ void parse_arguments(int argc, char **args) {
             arg_token       = arg_litn("t", "token", 0, 1, "Start with token"),
             arg_debug       = arg_litn("d", "debug", 0, 1, "Enable debug mode"),
             arg_name        = arg_strn(NULL, NULL, "<name>", 1, 1, "Name of this client"),
+            arg_ip          = arg_strn(NULL, NULL, "<ip>", 1, 1, "IPv4 address of this client"),
             arg_port        = arg_intn(NULL, NULL, "<port>", 1, 1, "Port for this client to listen on"),
-            arg_next_ip     = arg_strn(NULL, NULL, "<next ip>", 1, 1, "IPv4 address of the next client"),
-            arg_next_port   = arg_intn(NULL, NULL, "<next port>", 1, 1, "Port of the next client"),
+            arg_next_ip     = arg_strn(NULL, NULL, "<next ip>", 0, 1, "IPv4 address of the next client"),
+            arg_next_port   = arg_intn(NULL, NULL, "<next port>", 0, 1, "Port of the next client"),
             end             = arg_end(20)
     };
 
@@ -165,15 +185,51 @@ void setup_logger(){
 }
 
 
+
+////==========================================================================
+//// SOCKET
+////==========================================================================
+int socket_fd;
+
+void setup_socket(int port) {
+
+    // setup input address
+    struct sockaddr_in in_address;
+    memset(&in_address, 0, sizeof(in_address));
+    in_address.sin_family = AF_INET;
+    in_address.sin_addr.s_addr = INADDR_ANY;
+    in_address.sin_port = htons(port);
+
+    // create socket
+    socket_fd = socket(AF_INET, SOCK_DGRAM, 0);
+    if (socket_fd < 0)
+        exit_fatal_no("An error occurred while creating socket");
+
+    // bind socket
+    if (bind(socket_fd, (const struct sockaddr *)&in_address, sizeof(in_address)) < 0)
+        exit_fatal_no("An error occurred while binding socket");
+
+    log_trace("Socket bound successfully on port %d", port);
+
+}
+
+void cleanup_socket() {
+    if (close(socket_fd) == -1)
+        log_error("An error occurred while closing socket");
+
+    log_trace("Socket closed successfully");
+}
+
+
+
 ////==========================================================================
 //// LOGGING SERVICE
 ////==========================================================================
-int multicast_socket_fd;
+struct sockaddr_in multicast_address;
 
 void setup_logging_service() {
 
     // setup multicast address
-    struct sockaddr_in multicast_address;
     memset(&multicast_address, 0, sizeof(multicast_address));
     multicast_address.sin_family = AF_INET;
     multicast_address.sin_port = htons(LOGGING_SERVICE_PORT);
@@ -182,24 +238,8 @@ void setup_logging_service() {
     if (inet_pton(AF_INET, LOGGING_SERVICE_ADDRESS, &(multicast_address.sin_addr)) != 1)
         exit_fatal("Logging service address not in IPv4 format");
 
-    // create socket
-    multicast_socket_fd = socket(AF_INET, SOCK_DGRAM, 0);
-    if (multicast_socket_fd < 0)
-    exit_fatal_no("An error occurred while creating multicast socket");
+    log_trace("Multicast address created successfully");
 
-    // connect socket
-    if (connect(multicast_socket_fd, (const struct sockaddr *)&multicast_address, sizeof(multicast_address)) == -1)
-        exit_fatal_no("An error occurred while connecting to multicast");
-
-    log_trace("Multicast socket connected successfully");
-
-}
-
-void cleanup_multicast_socket() {
-    if (close(multicast_socket_fd) == -1)
-        log_error("An error occurred while closing multicast socket");
-
-    log_trace("Multicast socket closed successfully");
 }
 
 void log_token(struct token *tok) {
@@ -209,79 +249,10 @@ void log_token(struct token *tok) {
     int n = sprintf(buffer, "%s %d %d", arg_name->sval[0], tok->type, tok->uuid);
 
     // send multicast
-    if (write(multicast_socket_fd, buffer, n) == -1)
-        log_error("An error occurred while sending multicast");
+    if (sendto(socket_fd, buffer, n, 0, (struct sockaddr*)&multicast_address, sizeof(multicast_address)) == -1)
+        log_error_no("An error occurred while sending multicast");
 
     log_trace("Multicast to logging service has been sent");
-}
-
-
-
-////==========================================================================
-//// SOCKETS
-////==========================================================================
-int input_socket_fd;
-int output_socket_fd;
-
-void setup_input_socket() {
-
-    // setup input address
-    struct sockaddr_in in_address;
-    memset(&in_address, 0, sizeof(in_address));
-    in_address.sin_family = AF_INET;
-    in_address.sin_addr.s_addr = INADDR_ANY;
-    in_address.sin_port = htons(arg_port->ival[0]);
-
-    // create socket
-    input_socket_fd = socket(AF_INET, SOCK_DGRAM, 0);
-    if (input_socket_fd < 0)
-        exit_fatal_no("An error occurred while creating of input socket");
-
-    // bind socket
-    if (bind(input_socket_fd, (const struct sockaddr *)&in_address, sizeof(in_address)) < 0)
-        exit_fatal_no("An error occurred while binding of input socket");
-
-    log_trace("Input socket bound successfully");
-
-}
-
-void setup_output_socket() {
-
-    // setup next address
-    struct sockaddr_in next_address;
-    memset(&next_address, 0, sizeof(next_address));
-    next_address.sin_family = AF_INET;
-    next_address.sin_port = htons(arg_next_port->ival[0]);
-
-    // parse ip
-    if (inet_pton(AF_INET, arg_next_ip->sval[0], &(next_address.sin_addr)) != 1)
-        exit_error("Next address not in IPv4 format");
-
-    // create socket
-    output_socket_fd = socket(AF_INET, SOCK_DGRAM, 0);
-    if (output_socket_fd < 0)
-        exit_fatal_no("An error occurred while creating of output socket");
-
-    // connect socket
-    if (connect(output_socket_fd, (const struct sockaddr *)&next_address, sizeof(next_address)) == -1)
-        exit_fatal_no("An error occurred while connecting to next client");
-
-    log_trace("Output socket connected successfully");
-
-}
-
-void cleanup_input_socket() {
-    if (close(input_socket_fd) == -1)
-        log_error("An error occurred while closing input socket");
-
-    log_trace("Input socket closed successfully");
-}
-
-void cleanup_output_socket() {
-    if (close(output_socket_fd) == -1)
-        log_error("An error occurred while closing output socket");
-
-    log_trace("Output socket closed successfully");
 }
 
 
@@ -316,24 +287,69 @@ void handle_console_input() {
 ////==========================================================================
 //// OUTPUT SOCKET HANDLING
 ////==========================================================================
+int output_address_ready = 0;
+struct sockaddr_in output_address;
+
+void set_output_address(const char* address, int port) {
+
+    // set address
+    memset(&output_address, 0, sizeof(output_address));
+    output_address.sin_family = AF_INET;
+    output_address.sin_port = htons(port);
+
+    // parse ip
+    if (inet_pton(AF_INET, address, &(output_address.sin_addr)) != 1)
+        exit_error("Output address not in IPv4 format");
+
+    // set flag as ready
+    output_address_ready = 1;
+
+    log_debug("Output address set to %s:%d", address, port);
+}
+
 void send_token(struct token *tok) {
     sleep(SLEEP_TIME);
 
-    if (write(output_socket_fd, tok, sizeof(struct token)) == -1)
+    if(!output_address_ready){
+        log_error("Couldn't send token, output address not ready");
+        return;
+    }
+
+    if (sendto(socket_fd, tok, sizeof(struct token), 0, (const struct sockaddr *)&output_address, sizeof(output_address)) == -1)
         exit_fatal_no("An error occurred while sending token");
 
     log_debug("Token of type %d has been sent (uuid=%d)", tok->type, tok->uuid);
     log_token(tok);
 }
 
-void send_new_token() {
+void send_conn_token() {
+
+    // create token
     struct token tok;
-    tok.type = TOKEN_TYPE_EMPTY;
     tok.uuid = rand();
+    tok.type = TOKEN_TYPE_CONN;
+    tok.data.conn.port = arg_port->ival[0];
+    strcpy(tok.data.conn.address, arg_ip->sval[0]);
 
-    log_debug("Created new token of type %d (uuid=%d)", tok.type, tok.uuid);
+    log_debug("New CONN token has been sent (uuid=%d)", tok.uuid);
 
+    // send token
     send_token(&tok);
+
+}
+
+void send_empty_token() {
+
+    // create token
+    struct token tok;
+    tok.uuid = valid_token_uuid;
+    tok.type = TOKEN_TYPE_EMPTY;
+
+    log_debug("New EMPTY token has been sent (uuid=%d)", tok.uuid);
+
+    // send token
+    send_token(&tok);
+
 }
 
 
@@ -387,7 +403,57 @@ void handle_token_message(struct token *tok) {
 
 }
 
-void *handle_input_socket() {
+void handle_token_conn(struct token *tok) {
+
+    if (output_address_ready) {
+
+        // create response
+        struct token res;
+        res.type = TOKEN_TYPE_CONN_ACK;
+        res.uuid = valid_token_uuid;
+        res.data.conn.port = ntohs(output_address.sin_port);
+        inet_ntop(AF_INET, &(output_address.sin_addr), res.data.conn.address, INET_ADDRSTRLEN);
+
+        // set output address
+        set_output_address(tok->data.conn.address, tok->data.conn.port);
+
+        // send response
+        send_token(&res);
+
+    } else {
+
+        set_output_address(tok->data.conn.address, tok->data.conn.port);
+
+        valid_token_uuid = rand();
+
+        // create response
+        struct token res;
+        res.type = TOKEN_TYPE_CONN_ACK;
+        res.uuid = valid_token_uuid;
+        res.data.conn.port = arg_port->ival[0];
+        strcpy(res.data.conn.address, arg_ip->sval[0]);
+
+        // send ACK
+        send_token(&res);
+
+        // initialize communication by sending empty token
+        send_empty_token();
+
+    }
+
+}
+
+void handle_token_conn_ack(struct token *tok) {
+
+    // set new valid token uuid
+    valid_token_uuid = tok->uuid;
+
+    // set output address
+    set_output_address(tok->data.conn.address, tok->data.conn.port);
+
+}
+
+void *handle_socket() {
 
     log_trace("Listening on input socket");
 
@@ -395,11 +461,17 @@ void *handle_input_socket() {
 
         // read token
         struct token tok;
-        if (read(input_socket_fd, &tok, sizeof(struct token)) == -1)
+        if (read(socket_fd, &tok, sizeof(struct token)) == -1)
             exit_fatal_no("An error while reading token from input socket");
 
         // log
         log_debug("Received token of type %d (uuid=%d)", tok.type, tok.uuid);
+
+        //  validate token
+        if (!is_token_valid(&tok) && tok.type != TOKEN_TYPE_CONN) {
+            log_warn("Ignored not validated token with UUID=%d", tok.uuid);
+            continue;
+        }
 
         // handle token
         switch (tok.type) {
@@ -409,15 +481,21 @@ void *handle_input_socket() {
             case TOKEN_TYPE_MESSAGE:
                 handle_token_message(&tok);
                 break;
+            case TOKEN_TYPE_CONN:
+                handle_token_conn(&tok);
+                break;
+            case TOKEN_TYPE_CONN_ACK:
+                handle_token_conn_ack(&tok);
+                break;
             default:
                 log_error("Received token of unknown type %d (uuid=%d)", tok.type, tok.uuid);
         }
     }
 }
 
-void setup_input_socket_thread() {
+void setup_socket_thread() {
     pthread_t tid;
-    if (pthread_create(&tid, NULL, handle_input_socket, NULL) != 0)
+    if (pthread_create(&tid, NULL, handle_socket, NULL) != 0)
         exit_fatal_no("An error occurred while creating input socket thread");
 
     log_trace("Input socket thread created");
@@ -429,9 +507,7 @@ void setup_input_socket_thread() {
 //// CLEANUP
 ////==========================================================================
 void handle_exit() {
-    cleanup_input_socket();
-    cleanup_output_socket();
-    cleanup_multicast_socket();
+    cleanup_socket();
 }
 
 void setup_atexit() {
@@ -473,15 +549,16 @@ int main(int argc, char **args) {
 
     queue_init();
 
+    setup_socket(arg_port->ival[0]);
+
     setup_logging_service();
 
-    setup_input_socket();
-    setup_output_socket();
+    setup_socket_thread();
 
-    setup_input_socket_thread();
-
-    if (arg_token->count)
-        send_new_token();
+    if (arg_next_port->count && arg_next_ip->count) {
+        set_output_address(arg_next_ip->sval[0], arg_next_port->ival[0]);
+        send_conn_token();
+    }
 
     handle_console_input();
 
