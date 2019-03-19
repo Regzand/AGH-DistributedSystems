@@ -46,6 +46,7 @@ public class Interface {
 
     public static void main(String[] args) throws Exception {
         System.setProperty("java.net.preferIPv4Stack","true");
+        // new UDP().setValue("mcast_group_addr",InetAddress.getByName("230.100.200.x"))
 
         ShellFactory
                 .createConsoleShell("", "Distributed Map CLI (tip: enter ?list)", new Interface(DistributedMap.createDistributedMap(CLUSTER)))

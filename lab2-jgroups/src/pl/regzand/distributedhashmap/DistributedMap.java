@@ -1,8 +1,6 @@
 package pl.regzand.distributedhashmap;
 
-import org.jgroups.JChannel;
-import org.jgroups.Message;
-import org.jgroups.ReceiverAdapter;
+import org.jgroups.*;
 import org.jgroups.util.Util;
 
 import java.io.*;
@@ -100,6 +98,25 @@ public class DistributedMap extends ReceiverAdapter implements SimpleStringMap, 
     @Override
     public void setState(InputStream input) throws Exception {
         data = (HashMap<String, Integer>) Util.objectFromStream(new DataInputStream(input));
+    }
+
+    /**
+     * Handles merging desynchronised partitions
+     */
+    @Override
+    public void viewAccepted(View view) {
+        // only interested in merge views
+        if(!(view instanceof MergeView)) return;
+
+        // if this instance belongs to first group we can ignore this merge
+        if(((MergeView) view).getSubgroups().get(0).getMembers().contains(channel.getAddress())) return;
+
+        // else we need to fetch data
+        try {
+            channel.getState(null, 0);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     /**
