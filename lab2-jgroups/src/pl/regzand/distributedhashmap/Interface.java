@@ -1,6 +1,7 @@
 package pl.regzand.distributedhashmap;
 
 import asg.cliche.Command;
+import asg.cliche.Param;
 import asg.cliche.ShellFactory;
 
 public class Interface {
@@ -14,17 +15,17 @@ public class Interface {
     }
 
     @Command
-    public void put(String key, Integer value) {
+    public void put(@Param(name="key") String key, @Param(name="value") Integer value) {
         map.put(key, value);
     }
 
     @Command
-    public Integer remove(String key) {
+    public Integer remove(@Param(name="key") String key) {
         return map.remove(key);
     }
 
     @Command
-    public Integer get(String key) {
+    public Integer get(@Param(name="key") String key) {
         return map.get(key);
     }
 
@@ -34,7 +35,7 @@ public class Interface {
     }
 
     @Command
-    public Boolean containsKey(String key) {
+    public Boolean contains(@Param(name="key") String key) {
         return map.containsKey(key);
     }
 

@@ -20,15 +20,25 @@ public class DistributedMap extends ReceiverAdapter implements SimpleStringMap, 
         this.channel = channel;
     }
 
+    /**
+     * Returns key set available in local instance.
+     * @return
+     */
     public Set<String> getKeySet() {
         return data.keySet();
     }
 
+    /**
+     * Checks for key in local instance.
+     */
     @Override
     public boolean containsKey(String key) {
         return data.containsKey(key);
     }
 
+    /**
+     * Gets value from local instance.
+     */
     @Override
     public Integer get(String key) {
         return data.get(key);
