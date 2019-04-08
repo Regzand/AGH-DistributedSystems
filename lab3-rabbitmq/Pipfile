@@ -1,0 +1,18 @@
+[[source]]
+name = "pypi"
+url = "https://pypi.org/simple"
+verify_ssl = true
+
+[dev-packages]
+
+[packages]
+pika = "*"
+termcolor = "*"
+
+[requires]
+python_version = "3.6"
+
+[scripts]
+doctor = "python3 Doctor.py"
+specialist = "python3 Specialist.py"
+administrator = "python3 Administrator.py"
