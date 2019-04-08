@@ -25,13 +25,15 @@ class Specialist:
         self._announcements_consumer.start_consuming()
 
     def _handle_announcements(self, channel, method, props, body):
-        print(colored(body.decode(), "cyan"))
+        print(colored("[A] " + body.decode(), "cyan"))
         channel.basic_ack(delivery_tag=method.delivery_tag)
 
     def _handle_examinations(self, channel, method, props, body):
         request = body.decode().split(" ")
         print(colored(f'Received request for {request[1]} examination for {request[0]} from {request[2]}', 'blue'))
-        sleep(randint(1,3))
+
+        sleep(randint(1, 3))
+
         self._examinations_producer.send(f'{request[0]} {request[1]}', key=f'result.{request[2]}')
         print(colored(f'Results of {request[1]} examination for {request[0]} has been sent to {request[2]}', 'green'))
         channel.basic_ack(delivery_tag=method.delivery_tag)

@@ -17,7 +17,7 @@ class Administrator:
         self._examinations_consumer.start_consuming()
 
     def _handle_examinations(self, channel, method, props, body):
-        print(colored(body.decode(), "grey"))
+        print(colored(f'[{method.routing_key}] {body.decode()}', "grey"))
         channel.basic_ack(delivery_tag=method.delivery_tag)
 
     def send_announcement(self, message):

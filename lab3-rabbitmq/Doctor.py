@@ -24,7 +24,7 @@ class Doctor:
         self._announcements_consumer.start_consuming()
 
     def _handle_announcements(self, channel, method, props, body):
-        print(colored(body.decode(), "cyan"))
+        print(colored("[A] " + body.decode(), "cyan"))
         channel.basic_ack(delivery_tag=method.delivery_tag)
 
     def _handle_examinations(self, channel, method, props, body):
