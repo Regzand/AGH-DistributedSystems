@@ -1,0 +1,17 @@
+{
+  "name": "exchange-rates",
+  "version": "1.0.0",
+  "private": true,
+  "description": "",
+  "main": "exchange-rates-server.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "author": "Jan Gołda <jan.golda@gmail.com>",
+  "dependencies": {
+    "@grpc/proto-loader": "^0.5.0",
+    "async": "^2.6.2",
+    "grpc": "^1.20.3",
+    "loggy": "^1.0.4"
+  }
+}

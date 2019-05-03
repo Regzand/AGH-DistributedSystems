@@ -1,0 +1,33 @@
+syntax = "proto3";
+
+// Currencies suported by api
+enum Currency {
+	EUR = 0;
+	USD = 1;
+	GBP = 2;
+	PLN = 3;
+}
+
+// Message containing rate of specific currency
+message ExchangeRate {
+	Currency currency = 1;
+	float value = 2;
+}
+
+// Message containing information about updated rates 
+message ExchangeRatesUpdate {
+	repeated ExchangeRate rates = 1;
+}
+
+// Message used by bank to specify subscription details
+message ExchangeRatesSubscription {
+	Currency baseCurrency = 1;
+	repeated Currency requestedCurrencies = 2;
+}
+
+// Service definition
+service ExchangeRatesService {
+	// Endpoint for subscribing to service
+	rpc subscribe(ExchangeRatesSubscription) returns (stream ExchangeRatesUpdate) {}
+}
+
