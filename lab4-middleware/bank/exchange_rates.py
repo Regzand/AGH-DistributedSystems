@@ -5,8 +5,8 @@ from typing import List
 import grpc
 from loguru import logger
 
-import exchange_rates_pb2 as proto
-from exchange_rates_pb2_grpc import ExchangeRatesServiceStub
+import idl.exchange_rates_pb2 as proto
+from idl.exchange_rates_pb2_grpc import ExchangeRatesServiceStub
 
 
 class Currency(enum.IntEnum):
@@ -15,6 +15,9 @@ class Currency(enum.IntEnum):
     USD = proto.USD
     GBP = proto.GBP
     PLN = proto.PLN
+
+    def __repr__(self):
+        return self.name
 
 
 class ExchangeRates:
@@ -48,7 +51,7 @@ class ExchangeRates:
             # get subscription
             subscription = stub.subscribe(req)
 
-            logger.debug('Subscribed to exchange rates service at {}:{}', host, port)
+            logger.debug('Subscribing to exchange rates service at {}:{}', host, port)
 
             # start fetching updates
             for update in subscription:

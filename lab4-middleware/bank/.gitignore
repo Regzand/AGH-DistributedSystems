@@ -158,5 +158,4 @@ venv.bak/
 # mypy
 .mypy_cache/
 
-exchange_rates_pb2.py
-exchange_rates_pb2_grpc.py
+/idl/

@@ -6,7 +6,7 @@ const grpc = require('grpc');
 const protoLoader = require('@grpc/proto-loader');
 
 // constants
-const PROTO_PATH = path.resolve(__dirname, '../exchange-rates.proto');
+const PROTO_PATH = path.resolve(__dirname, '../idl/exchange-rates.proto');
 const DEFAULT_RATES = {
     EUR: 1.0000,
     USD: 1.1155,
