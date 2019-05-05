@@ -9,7 +9,8 @@ const DEFAULT_HOST = '0.0.0.0';
 const DEFAULT_PORT = '50001';
 
 // create server
-const server = new require('./exchange-rates-server')();
+const ExchangeRatesServer = require('./exchange-rates-server')
+const server = new ExchangeRatesServer();
 
 // bind server
 server.bind(DEFAULT_HOST + ':' + DEFAULT_PORT, grpc.ServerCredentials.createInsecure());
