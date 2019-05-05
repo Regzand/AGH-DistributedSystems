@@ -7,6 +7,7 @@ const protoLoader = require('@grpc/proto-loader');
 
 // constants
 const PROTO_PATH = path.resolve(__dirname, '../idl/exchange-rates.proto');
+const BASE_CURRENCY = 'EUR';
 const DEFAULT_RATES = {
     EUR: 1.0000,
     USD: 1.1155,
@@ -81,7 +82,7 @@ class ExchangeRatesServer extends grpc.Server {
             // add currency to response
             response.rates.push({
                 currency: key,
-                value: self.rates[key] / self.rates[subscription.request['baseCurrency']]
+                value: self.rates[BASE_CURRENCY] / self.rates[subscription.request['baseCurrency']] * self.rates[key]
             });
         });
 
@@ -104,6 +105,7 @@ class ExchangeRatesServer extends grpc.Server {
         // simulate changes
         for (let key in this.rates) {
             if (!this.rates.hasOwnProperty(key)) continue;
+            if (key === BASE_CURRENCY) continue;
             if (Math.random() > probability) continue;
 
             // calculate change

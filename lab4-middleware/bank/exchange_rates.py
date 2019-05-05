@@ -31,10 +31,14 @@ class ExchangeRates:
 
     def __contains__(self, key: Currency):
         """ Checks if rate for given currency is available. """
+        if key == self._base_currency:
+            return True
         return key in self._rates
 
     def __getitem__(self, key: Currency):
         """ Returns rate for given value, or throws KeyError if rate is not available. """
+        if key == self._base_currency:
+            return 1.0
         if key not in self:
             raise KeyError(f'Exchange rate for currency {key.name} is not available')
         return self._rates[key]
