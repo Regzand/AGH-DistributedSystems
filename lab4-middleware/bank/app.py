@@ -1,8 +1,11 @@
 import argparse
 import threading
 
+import Ice
 from argparse_utils import enum_action
+from loguru import logger
 
+from bank import BankI
 from exchange_rates import Currency, ExchangeRates
 
 
@@ -47,3 +50,14 @@ if __name__ == '__main__':
     exchange_rates = ExchangeRates(args.base_currency, args.currencies)
     threading.Thread(target=exchange_rates.subscribe, args=(args.exchange_host, args.exchange_port)).start()
 
+    # setup ice
+    with Ice.initialize() as communicator:
+
+        # setup adapter
+        adapter = communicator.createObjectAdapterWithEndpoints('BankAdapter', f'default -p {args.port}')
+        adapter.add(BankI(), communicator.stringToIdentity('Bank'))
+        adapter.activate()
+
+        logger.info('Bank server started at port {}', args.port)
+
+        communicator.waitForShutdown()
