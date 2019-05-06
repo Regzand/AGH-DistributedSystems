@@ -84,8 +84,9 @@ class ClientShell(cmd.Cmd):
             declaredMonthlyIncome=args.income
         )
 
-        result.account = Banking.PremiumAccountPrx.checkedCast(result.account)
-        if result is None:
+        if result.type == Banking.AccountType.PREMIUM:
+            result.account = Banking.PremiumAccountPrx.checkedCast(result.account)
+        else:
             result.account = Banking.AccountPrx.checkedCast(result.account)
 
         self.accounts[args.pesel] = result
@@ -102,6 +103,11 @@ class ClientShell(cmd.Cmd):
             pesel=args.pesel,
             password=args.password
         )
+
+        if result.type == Banking.AccountType.PREMIUM:
+            result.account = Banking.PremiumAccountPrx.checkedCast(result.account)
+        else:
+            result.account = Banking.AccountPrx.checkedCast(result.account)
 
         self.accounts[args.pesel] = result
         self.account = result

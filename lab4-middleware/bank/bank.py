@@ -130,7 +130,7 @@ class PremiumAccountI(AccountI, Banking.PremiumAccount):
 
         # return response
         return Banking.CreditOffer(
-            baseCurrency=cost * self._bank.rates[currency],
+            baseCurrency=cost / self._bank.rates[currency],
             foreignCurrency=cost
         )
 
@@ -206,6 +206,6 @@ class BankI(Banking.Bank):
         if account.type == Banking.AccountType.PREMIUM:
             account_proxy = Banking.PremiumAccountPrx.uncheckedCast(account_proxy)
         else:
-            account_proxy = Banking.PremiumAccountPrx.uncheckedCast(account_proxy)
+            account_proxy = Banking.AccountPrx.uncheckedCast(account_proxy)
 
         return Banking.RegistrationResult(account.firstName, account.lastName, pesel, password, _ice_currency(self.base_currency), account.type, account_proxy)
