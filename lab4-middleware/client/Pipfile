@@ -1,0 +1,17 @@
+[[source]]
+name = "pypi"
+url = "https://pypi.org/simple"
+verify_ssl = true
+
+[scripts]
+app = "python app.py"
+
+[dev-packages]
+
+[packages]
+argparse-utils = "*"
+zeroc-ice = "*"
+tabulate = "*"
+
+[requires]
+python_version = "3.7"

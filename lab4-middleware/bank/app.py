@@ -37,6 +37,11 @@ def _parse_arguments():
                         default=list(Currency),
                         help='Currencies supported by this bank'
                         )
+    parser.add_argument('-t', '--threshold',
+                        type=int,
+                        default=10000,
+                        help='Premium account threshold'
+                        )
 
     return parser.parse_args()
 
@@ -55,7 +60,7 @@ if __name__ == '__main__':
 
         # setup adapter
         adapter = communicator.createObjectAdapterWithEndpoints('BankAdapter', f'default -p {args.port}')
-        adapter.add(BankI(), communicator.stringToIdentity('Bank'))
+        adapter.add(BankI(adapter, exchange_rates, args.base_currency, args.currencies, args.threshold), communicator.stringToIdentity('Bank'))
         adapter.activate()
 
         logger.info('Bank server started at port {}', args.port)

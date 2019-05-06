@@ -20,7 +20,7 @@ module Banking
 
     // Struct returned after request for credit offer
     struct CreditOffer {
-        double homeCurrency;
+        double baseCurrency;
         double foreignCurrency;
     }
 
@@ -48,7 +48,11 @@ module Banking
 
     // Struct returned after registration, contains info needed for future connections
     struct RegistrationResult {
+	string firstName;
+	string lastName;
+	string pesel;
         string password;
+	Currency baseCurrency;
         AccountType type;
         Account* account;
     };
