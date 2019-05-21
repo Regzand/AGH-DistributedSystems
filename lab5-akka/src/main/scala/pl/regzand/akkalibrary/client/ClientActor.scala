@@ -1,7 +1,7 @@
 package pl.regzand.akkalibrary.client
 
 import akka.actor.{Actor, ActorLogging, ActorSelection, Props}
-import pl.regzand.akkalibrary.messages.{NotFoundResponse, PriceResponse, Request, SuccessfulResponse}
+import pl.regzand.akkalibrary.messages.{NotFoundResponse, PriceResponse, Request, SearchRequest, SuccessfulResponse}
 
 object ClientActor {
   def props(library: ActorSelection): Props = Props(new ClientActor(library))
@@ -17,6 +17,8 @@ class ClientActor(library: ActorSelection) extends Actor with ActorLogging {
 
     case response: PriceResponse => println(s"Price: ${response.price}"); System.exit(0)
     case msg: String => println(msg)
+
+    case msg => log.error("Received unexpected message: " + msg.toString)
   }
 
 }

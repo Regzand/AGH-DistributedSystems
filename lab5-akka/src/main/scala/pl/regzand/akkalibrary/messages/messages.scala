@@ -5,10 +5,11 @@ import java.util.UUID
 // ==============================================
 //  REQUESTS
 // ==============================================
-abstract class Request(val uuid: String = UUID.randomUUID().toString) {
+abstract class Request(val uuid: String = UUID.randomUUID().toString) extends Serializable {
 
   def notFoundResponse = NotFoundResponse(uuid)
   def successfulResponse = SuccessfulResponse(uuid)
+  def priceResponse(price: Float) = PriceResponse(price, uuid)
 
 }
 
@@ -22,7 +23,7 @@ case class ReadRequest(title: String) extends Request
 // ==============================================
 //  RESPONSES
 // ==============================================
-abstract class Response(uuid: String)
+abstract class Response(uuid: String) extends Serializable
 
 case class NotFoundResponse(uuid: String) extends Response(uuid)
 
