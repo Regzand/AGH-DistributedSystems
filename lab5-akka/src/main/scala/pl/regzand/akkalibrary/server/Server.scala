@@ -1,6 +1,7 @@
 package pl.regzand.akkalibrary.server
 
 import akka.actor.ActorSystem
+import akka.stream.ActorMaterializer
 import com.typesafe.config.ConfigFactory
 
 import scala.concurrent.Await
