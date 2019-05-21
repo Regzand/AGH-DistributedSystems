@@ -12,11 +12,20 @@ class ClientActor(library: ActorSelection) extends Actor with ActorLogging {
   override def receive: Receive = {
     case request: Request => library ! request
 
-    case _: NotFoundResponse => println("Not found"); System.exit(0);
-    case _: SuccessfulResponse => println("Successful"); System.exit(0)
+    case _: NotFoundResponse =>
+      println("Not found")
+      context.system.terminate()
 
-    case response: PriceResponse => println(s"Price: ${response.price}"); System.exit(0)
-    case msg: String => println(msg)
+    case _: SuccessfulResponse =>
+      println("Successful")
+      context.system.terminate()
+
+    case response: PriceResponse =>
+      println(s"Price: ${response.price}")
+      context.system.terminate()
+
+    case msg: String =>
+      println(msg)
 
     case msg => log.error("Received unexpected message: " + msg.toString)
   }

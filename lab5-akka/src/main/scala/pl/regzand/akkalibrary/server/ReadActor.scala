@@ -1,7 +1,7 @@
 package pl.regzand.akkalibrary.server
 
-import java.io.FileNotFoundException
-import java.nio.file.Path
+import java.nio.file.{Files, NoSuchFileException, Path}
+
 import scala.concurrent.duration._
 import akka.actor.{Actor, ActorLogging, ActorRef, PoisonPill, Props}
 import akka.stream.ActorMaterializer
@@ -21,7 +21,7 @@ class ReadActor(val request: ReadRequest, val client: ActorRef, val booksDirecto
   // generate file path
   private val path = booksDirectoryPath.resolve(request.title.toLowerCase.replace(" ", "-") + ".txt")
 
-  try {
+  if(Files.isRegularFile(path)) {
 
     // stream file
     FileIO.fromPath(path)
@@ -29,8 +29,8 @@ class ReadActor(val request: ReadRequest, val client: ActorRef, val booksDirecto
       .throttle(1, 1.second)
       .runWith(Sink.actorRef(client, request.successfulResponse))
 
-  } catch {
-    case _: FileNotFoundException => client ! request.notFoundResponse
+  } else {
+    client ! request.notFoundResponse
   }
 
   // kill itself after finishing streaming
