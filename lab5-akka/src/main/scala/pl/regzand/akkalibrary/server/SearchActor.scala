@@ -13,7 +13,26 @@ import pl.regzand.akkalibrary.messages.SearchRequest
   */
 class SearchActor(val request: SearchRequest, val client: ActorRef, val booksDatabasesPaths: List[Path]) extends Actor with ActorLogging {
 
+  private var nones = 0
+
+  // start searching
+  private val children = for (path <- booksDatabasesPaths) yield {
+    context.actorOf(DatabaseSearchActor.props(path, request.title))
+  }
+
+  // handle messages
   override def receive: Receive = {
+    case price: Float =>
+      client ! request.priceResponse(price)
+      context.stop(self)
+
+    case None =>
+      nones += 1
+      if(nones >= booksDatabasesPaths.size){
+        client ! request.notFoundResponse
+        context.stop(self)
+      }
+
     case msg => log.error("Received unexpected message: " + msg.toString)
   }
 
