@@ -1,8 +1,11 @@
 package pl.regzand.akkalibrary.server
 
+import java.io.FileNotFoundException
 import java.nio.file.Path
 
-import akka.actor.{Actor, ActorLogging, ActorRef, Props}
+import scala.concurrent.duration._
+import akka.actor.{Actor, ActorLogging, ActorRef, OneForOneStrategy, Props, SupervisorStrategy}
+import akka.pattern.{BackoffOpts, BackoffSupervisor}
 import pl.regzand.akkalibrary.messages.SearchRequest
 
 /**
@@ -13,12 +16,17 @@ import pl.regzand.akkalibrary.messages.SearchRequest
   */
 class SearchActor(val request: SearchRequest, val client: ActorRef, val booksDatabasesPaths: List[Path]) extends Actor with ActorLogging {
 
-  private var nones = 0
+  // handle errors
+//  override val supervisorStrategy: OneForOneStrategy =
+//    OneForOneStrategy(maxNrOfRetries = -1, withinTimeRange = Duration.Inf, loggingEnabled = false) {
+//      case _: FileNotFoundException => {
+//        println("ee")
+//        Restart
+//      }
+//      case _: Exception => Escalate
+//    }
 
-  // start searching
-  private val children = for (path <- booksDatabasesPaths) yield {
-    context.actorOf(DatabaseSearchActor.props(path, request.title))
-  }
+  private var nones = 0
 
   // handle messages
   override def receive: Receive = {
@@ -34,6 +42,26 @@ class SearchActor(val request: SearchRequest, val client: ActorRef, val booksDat
       }
 
     case msg => log.error("Received unexpected message: " + msg.toString)
+  }
+
+  // start searching
+  for (path <- booksDatabasesPaths) {
+    val supervisor = BackoffSupervisor.props(
+      BackoffOpts
+        .onFailure(
+          DatabaseSearchActor.props(path, request.title),
+          childName = "dbSearch:" + path.getFileName,
+          minBackoff = 3.seconds,
+          maxBackoff = 30.seconds,
+          randomFactor = 0.2
+        )
+        .withSupervisorStrategy(OneForOneStrategy(loggingEnabled = false) {
+          case _: FileNotFoundException => SupervisorStrategy.Restart
+          case _ => SupervisorStrategy.Escalate
+        })
+    )
+
+    context.actorOf(supervisor, "supervisor:" + path.getFileName)
   }
 
   // logging

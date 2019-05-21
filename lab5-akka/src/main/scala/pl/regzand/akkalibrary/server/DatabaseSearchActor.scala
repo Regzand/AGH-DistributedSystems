@@ -10,34 +10,46 @@ import scala.io.Source
 /**
   * Actor that searches given file for given title and returns result to its parent
   * @param file - file to search in
-  * @param title - title to search for
   */
 class DatabaseSearchActor(file: Path, title: String) extends Actor with ActorLogging {
 
+  private def search(title: String):Unit = {
+
+    // searching
+    val source = Source.fromFile(file.toFile)
+
+    breakable {
+      for (line <- source.getLines()) {
+        val splited = line.split(",")
+
+        if (splited(0).equalsIgnoreCase(title)) {
+          context.parent ! splited(1).toFloat
+          break
+        }
+      }
+      context.parent ! None
+    }
+
+    source.close()
+
+    // kill self
+    self ! PoisonPill
+  }
+
   // not expecting any messages
   override def receive: Receive = {
-    case msg => log.error("Received unexpected message: " + msg.toString)
+    case title: String =>
+      log.debug("search --- " + title)
+      search(title)
+
+    case msg =>
+      log.error("Received unexpected message: " + msg.toString)
   }
 
-  // searching
-  private val source = Source.fromFile(file.toFile)
+  self ! title
 
-  breakable {
-    for (line <- source.getLines()) {
-      val splited = line.split(",")
-
-      if (splited(0).equalsIgnoreCase(title)) {
-        context.parent ! splited(1).toFloat
-        break
-      }
-    }
-    context.parent ! None
-  }
-
-  source.close()
-
-  // kill self
-  self ! PoisonPill
+  // logging
+  log.debug(self.path.name + " started")
 
 }
 
