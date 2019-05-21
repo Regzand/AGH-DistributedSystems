@@ -8,6 +8,9 @@ import pl.regzand.akkalibrary.client.commands.{OrderCommand, ReadCommand, Search
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 
+/**
+  * Entry point of client app
+  */
 object Client extends App {
 
   // load configuration

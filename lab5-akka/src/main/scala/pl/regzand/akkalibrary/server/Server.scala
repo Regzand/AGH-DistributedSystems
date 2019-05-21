@@ -1,13 +1,16 @@
 package pl.regzand.akkalibrary.server
 
 import akka.actor.ActorSystem
-import akka.stream.ActorMaterializer
 import com.typesafe.config.ConfigFactory
 
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 
+/**
+  * Entry point for server app
+  */
 object Server extends App {
+
   // load configuration
   val config = ConfigFactory.load("server")
 
@@ -19,4 +22,5 @@ object Server extends App {
 
   // wait for termination
   Await.result(system.whenTerminated, Duration.Inf)
+
 }

@@ -4,6 +4,9 @@ import akka.actor.ActorRef
 import org.backuity.clist.{Command, arg}
 import pl.regzand.akkalibrary.messages.ReadRequest
 
+/**
+  * Client CLI command that sends read request
+  */
 object ReadCommand extends Command("read", "read book from library") with BaseCommand {
 
   var title: String = arg[String](name = "title", description = "book to read")

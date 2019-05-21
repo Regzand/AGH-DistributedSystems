@@ -1,17 +1,16 @@
 package pl.regzand.akkalibrary.server
 
-import java.util.UUID
-import java.nio.file.{Path, Paths}
+import java.nio.file.{Paths}
 
 import scala.collection.JavaConverters._
 import akka.actor.{Actor, ActorLogging, Props}
 import com.typesafe.config.Config
 import pl.regzand.akkalibrary.messages.{OrderRequest, ReadRequest, SearchRequest}
 
-object ServerActor {
-  def props(config: Config): Props = Props(new ServerActor(config))
-}
-
+/**
+  * Main server actor responsible for spawning actors for specific requests
+  * @param config - server configuration
+  */
 class ServerActor(val config: Config) extends Actor with ActorLogging {
 
   // database configuration
@@ -38,4 +37,8 @@ class ServerActor(val config: Config) extends Actor with ActorLogging {
 
   // logging
   log.debug(self.path.name + " started")
+}
+
+object ServerActor {
+  def props(config: Config): Props = Props(new ServerActor(config))
 }

@@ -5,10 +5,10 @@ import java.nio.file.{Files, Path, StandardOpenOption}
 import akka.actor.{Actor, ActorLogging, Props}
 import pl.regzand.akkalibrary.messages.OrderRequest
 
-object OrderActor {
-  def props(ordersDatabasePath: Path): Props = Props(new OrderActor(ordersDatabasePath))
-}
-
+/**
+  * Actor responsible for handling all order requests
+  * @param ordersDatabasePath - path to file to which orders will be saved
+  */
 class OrderActor(val ordersDatabasePath: Path) extends Actor with ActorLogging {
 
   // order request handler
@@ -35,4 +35,8 @@ class OrderActor(val ordersDatabasePath: Path) extends Actor with ActorLogging {
   // logging
   log.debug(self.path.name + " started")
 
+}
+
+object OrderActor {
+  def props(ordersDatabasePath: Path): Props = Props(new OrderActor(ordersDatabasePath))
 }

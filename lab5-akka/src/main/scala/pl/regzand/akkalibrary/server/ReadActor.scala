@@ -9,12 +9,15 @@ import akka.stream.scaladsl.{FileIO, Framing, Sink}
 import akka.util.ByteString
 import pl.regzand.akkalibrary.messages.ReadRequest
 
-object ReadActor {
-  def props(request: ReadRequest, client: ActorRef, booksDirectoryPath: Path): Props = Props(new ReadActor(request, client, booksDirectoryPath))
-}
-
+/**
+  * Actor created for each read request, streams content of a book back to sender
+  * @param request - read request that triggered creation of this actor
+  * @param client - client that has send request
+  * @param booksDirectoryPath - path to directory in which books are stored
+  */
 class ReadActor(val request: ReadRequest, val client: ActorRef, val booksDirectoryPath: Path) extends Actor with ActorLogging {
 
+  // streams book back to sender
   private def streamBook():Unit = {
     implicit val materializer: ActorMaterializer = ActorMaterializer()
 
@@ -48,4 +51,8 @@ class ReadActor(val request: ReadRequest, val client: ActorRef, val booksDirecto
 
   // start streaming
   streamBook()
+}
+
+object ReadActor {
+  def props(request: ReadRequest, client: ActorRef, booksDirectoryPath: Path): Props = Props(new ReadActor(request, client, booksDirectoryPath))
 }

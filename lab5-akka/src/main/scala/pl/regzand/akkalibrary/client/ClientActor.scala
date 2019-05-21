@@ -3,10 +3,10 @@ package pl.regzand.akkalibrary.client
 import akka.actor.{Actor, ActorLogging, ActorSelection, Props}
 import pl.regzand.akkalibrary.messages.{NotFoundResponse, PriceResponse, Request, SearchRequest, SuccessfulResponse}
 
-object ClientActor {
-  def props(library: ActorSelection): Props = Props(new ClientActor(library))
-}
-
+/**
+  * Actor responsible for sending requests and printing its results
+  * @param library - remote actor to which requests will be sent
+  */
 class ClientActor(library: ActorSelection) extends Actor with ActorLogging {
 
   override def receive: Receive = {
@@ -21,4 +21,8 @@ class ClientActor(library: ActorSelection) extends Actor with ActorLogging {
     case msg => log.error("Received unexpected message: " + msg.toString)
   }
 
+}
+
+object ClientActor {
+  def props(library: ActorSelection): Props = Props(new ClientActor(library))
 }
