@@ -14,7 +14,7 @@ object Server extends App {
   val system = ActorSystem("library", config)
 
   // create main actor
-  val serverActor = system.actorOf(ServerActor.props(config.getConfig("library")), "server-actor")
+  val serverActor = system.actorOf(ServerActor.props(config.getConfig("library")), "server")
 
   // wait for termination
   Await.result(system.whenTerminated, Duration.Inf)

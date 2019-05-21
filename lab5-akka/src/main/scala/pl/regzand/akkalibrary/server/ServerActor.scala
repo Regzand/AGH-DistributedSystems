@@ -20,12 +20,12 @@ class ServerActor(val config: Config) extends Actor with ActorLogging {
   private val booksDirectory = Paths.get(config.getString("books-directory")).toAbsolutePath
 
   // actors
-  private val orderActor = context.actorOf(OrderActor.props(ordersDatabase), "order-actor")
+  private val orderActor = context.actorOf(OrderActor.props(ordersDatabase), "order")
 
   // handlers
-  private def handleSearchRequest(request: SearchRequest): Unit = context.actorOf(SearchActor.props(request, context.sender(), booksDatabases), "search:" + UUID.randomUUID().toString)
+  private def handleSearchRequest(request: SearchRequest): Unit = context.actorOf(SearchActor.props(request, context.sender(), booksDatabases), "search:" + request.uuid)
   private def handleOrderRequest(request: OrderRequest): Unit = orderActor.forward(request)
-  private def handleReadRequest(request: ReadRequest): Unit = context.actorOf(ReadActor.props(request, context.sender(), booksDirectory), "read:" + UUID.randomUUID().toString)
+  private def handleReadRequest(request: ReadRequest): Unit = context.actorOf(ReadActor.props(request, context.sender(), booksDirectory), "read:" + request.uuid)
 
   // handling messages
   override def receive: Receive = {

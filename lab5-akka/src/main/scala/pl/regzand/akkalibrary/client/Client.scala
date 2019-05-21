@@ -17,10 +17,10 @@ object Client extends App {
   val system = ActorSystem("client", config)
 
   // get remote actor
-  val library = system.actorSelection(s"akka.tcp://library@${config.getString("library.host")}:${config.getInt("library.port")}/user/server-actor")
+  val library = system.actorSelection(s"akka.tcp://library@${config.getString("library.host")}:${config.getInt("library.port")}/user/server")
 
   // create client actor
-  val clientActor = system.actorOf(ClientActor.props(library), "client-actor")
+  val clientActor = system.actorOf(ClientActor.props(library), "client")
 
   // parse arguments and execute commands
   Cli.parse(args)
