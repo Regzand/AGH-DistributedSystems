@@ -14,45 +14,25 @@ object ServerActor {
 
 class ServerActor(val config: Config) extends Actor with ActorLogging {
 
-  // actors configuration
-  val ordersDatabase: Path = Paths.get(config.getString("orders-database")).toAbsolutePath
-  val booksDatabases: List[Path] = for (file <- config.getStringList("books-databases").asScala.toList) yield Paths.get(file).toAbsolutePath
-  val booksDirectory: Path = Paths.get(config.getString("books-directory")).toAbsolutePath
+  // database configuration
+  private val ordersDatabase = Paths.get(config.getString("orders-database")).toAbsolutePath
+  private val booksDatabases = for (file <- config.getStringList("books-databases").asScala.toList) yield Paths.get(file).toAbsolutePath
+  private val booksDirectory = Paths.get(config.getString("books-directory")).toAbsolutePath
 
-  /**
-    * Handles search request by creating SearchActor
-    */
-  private def handleSearchRequest(request: SearchRequest) = {
-    context.actorOf(
-      SearchActor.props(request, context.sender(), booksDatabases),
-      "search:" + UUID.randomUUID().toString
-    )
-  }
+  // actors
+  private val orderActor = context.actorOf(OrderActor.props(ordersDatabase), "order-actor")
 
-  /**
-    * Handles order request by creating OrderActor
-    */
-  private def handleOrderRequest(request: OrderRequest) = {
-    context.actorOf(
-      OrderActor.props(request, context.sender(), ordersDatabase),
-      "order:" + UUID.randomUUID().toString
-    )
-  }
+  // handlers
+  private def handleSearchRequest(request: SearchRequest): Unit = context.actorOf(SearchActor.props(request, context.sender(), booksDatabases), "search:" + UUID.randomUUID().toString)
+  private def handleOrderRequest(request: OrderRequest): Unit = orderActor.forward(request)
+  private def handleReadRequest(request: ReadRequest): Unit = context.actorOf(ReadActor.props(request, context.sender(), booksDirectory), "read:" + UUID.randomUUID().toString)
 
-  /**
-    * Handles read request by creating ReadActor
-    */
-  private def handleReadRequest(request: ReadRequest) = {
-    context.actorOf(
-      ReadActor.props(request, context.sender(), booksDirectory),
-      "read:" + UUID.randomUUID().toString
-    )
-  }
-
+  // handling messages
   override def receive: Receive = {
-    case request: SearchRequest => handleSearchRequest(request);
-    case request: OrderRequest => handleOrderRequest(request);
-    case request: ReadRequest => handleReadRequest(request);
+    case request: SearchRequest => handleSearchRequest(request)
+    case request: OrderRequest => handleOrderRequest(request)
+    case request: ReadRequest => handleReadRequest(request)
+
     case msg => log.error("Received unexpected message: " + msg.toString)
   }
 

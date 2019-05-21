@@ -1,17 +1,34 @@
 package pl.regzand.akkalibrary.server
 
-import java.nio.file.Path
+import java.nio.file.{Files, Path, StandardOpenOption}
 
-import akka.actor.{Actor, ActorLogging, ActorRef, Props}
+import akka.actor.{Actor, ActorLogging, Props}
 import pl.regzand.akkalibrary.messages.OrderRequest
 
 object OrderActor {
-  def props(request: OrderRequest, client: ActorRef, ordersDatabasePath: Path): Props = Props(new OrderActor(request, client, ordersDatabasePath))
+  def props(ordersDatabasePath: Path): Props = Props(new OrderActor(ordersDatabasePath))
 }
 
-class OrderActor(val request: OrderRequest, val client: ActorRef, val ordersDatabasePath: Path) extends Actor with ActorLogging {
+class OrderActor(val ordersDatabasePath: Path) extends Actor with ActorLogging {
 
+  // order request handler
+  private def handleOrderRequest(request: OrderRequest): Unit = {
+
+    // append to file
+    Files.write(
+      ordersDatabasePath,
+      (request.title + "\n").getBytes,
+      StandardOpenOption.CREATE, StandardOpenOption.APPEND
+    )
+
+    // send response
+    context.sender() ! request.successfulResponse
+
+  }
+
+  // handling messages
   override def receive: Receive = {
+    case request: OrderRequest => handleOrderRequest(request)
     case msg => log.error("Received unexpected message: " + msg.toString)
   }
 
